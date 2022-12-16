@@ -48,7 +48,7 @@
 </template>
 
 <script>
-import { defaultContent } from '../jsondemo/content'
+import { defaultContent } from '../data/content'
 var jmespath = require('jmespath');
 var JSONbigString = require('json-bigint')({ "storeAsString": true });
 

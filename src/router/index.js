@@ -6,8 +6,8 @@ Vue.use(VueRouter)
 const routes = [
   {
     path: '/',
-    name: 'JSONPath',
-    component: () => import('@/views/JSONPath/index.vue')
+    name: 'home',
+    component: () => import('@/views/home/index.vue')
   }
 ]
 
