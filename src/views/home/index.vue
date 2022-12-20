@@ -54,7 +54,7 @@ var JSONbigString = require('json-bigint')({ "storeAsString": true });
 
 
 export default {
-  name: 'JsonXmlPathIndex',
+  name: 'index',
   components: {
     editor: require('vue2-ace-editor')
   },
@@ -74,14 +74,10 @@ export default {
     };
   },
   watch: {
-    // json: {
-    //   deep: true,
-    //   immediate: true,
-    //   handler(val) {
-    //     this.parserArray = []
-    //     this.jsonPath(this.parserArray, val, '$')
-    //   }
-    // }
+    content(val, old_val) {
+      console.log(val);
+      localStorage.setItem("content", val)
+    }
   },
   computed: {
     // 滚动区高度
@@ -90,9 +86,10 @@ export default {
     // }
   },
   created() {
-    this.content = defaultContent
+
   },
   mounted() {
+    this.content = localStorage.getItem("content") || defaultContent
     this.editorInit()
     window.onresize = () => {
       this.clientHeight = document.body.clientHeight - 36;
