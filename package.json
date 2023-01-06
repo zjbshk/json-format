@@ -7,6 +7,7 @@
     "build": "vue-cli-service build"
   },
   "dependencies": {
+    "basiccontext": "^3.5.1",
     "beautify": "0.0.8",
     "brace": "^0.11.1",
     "core-js": "^3.6.5",

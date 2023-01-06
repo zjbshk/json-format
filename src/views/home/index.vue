@@ -2,13 +2,12 @@
   <div class="json-path">
     <el-row>
       <el-input type="text" class="deal-search" :clearable="true" size="medium" @keyup.enter.native="searchJson"
-        @clear="this.dealContent = ''" prefix-icon="el-icon-search" v-model="dealSearch" placeholder="请输入jmespath匹配">
+        @clear="clearInput" prefix-icon="el-icon-search" v-model="dealSearch" placeholder="请输入jmespath匹配">
         <i slot="suffix" class="el-input__icon el-icon-question" style="cursor: pointer;"
           onclick="window.open('//jmespath.org','_blank')" title="jmespath教程"></i>
         <!-- <i slot="suffix" class="el-input__icon el-icon-time" style="cursor: pointer;" title="历史"></i> -->
       </el-input>
     </el-row>
-
     <el-row>
       <el-col :span="24">
         <editor ref="cEditor" class="editor" v-model="content" width="100%" :height="clientHeight" lang="json"
@@ -19,29 +18,7 @@
             tabSize: 2, //制表符大小
             fontSize: 16, //设置字号
             showPrintMargin: false  //去除编辑器里的竖线
-          }" @init="editorInit"></editor>
-      </el-col>
-      <el-col :span="12">
-        <el-drawer title="我是标题" :visible.sync="drawer" :with-header="false" size="75%" :modal="false">
-          <p class="editor-header">
-            <i class="el-icon-circle-close deal-icon" title="关闭抽屉" @click="drawer = false"
-              style="margin-left: 5px;"></i>
-            <i class="el-icon-copy-document deal-icon" title="复制" @click="onCopy"></i>
-            <i class="el-icon-magic-stick deal-icon" title="美化(ctrl + m)" @click="magic"></i>
-            <i class="el-icon-receiving deal-icon" title="压缩(ctrl + i)" @click="zip"></i>
-            <img src="@/assets/fold.png" class="deal-png" title="折叠(ctrl + l)" @click="fold" />
-            <img src="@/assets/unfold.png" class="deal-png" title="展开(ctrl + o)" @click="unfold" />
-          </p>
-          <editor ref="dcEditor" class="editor" v-model="dealContent" width="100%" :height="clientHeight" lang="json"
-            :theme="theme" :options="{
-              enableBasicAutocompletion: true, //启用基本自动完成
-              enableSnippets: true, // 启用代码段
-              enableLiveAutocompletion: true, //启用实时自动完成
-              tabSize: 2, //制表符大小
-              fontSize: 16, //设置字号
-              showPrintMargin: false  //去除编辑器里的竖线
-            }" @init="editorInit"></editor>
-        </el-drawer>
+          }" @init="editorInit" @contextmenu.prevent.native="openContextMenu($event)"></editor>
       </el-col>
     </el-row>
   </div>
@@ -51,7 +28,7 @@
 import { defaultContent } from '../data/content'
 var jmespath = require('jmespath');
 var JSONbigString = require('json-bigint')({ "storeAsString": true });
-
+let basicContext = require('basiccontext');
 
 export default {
   name: 'index',
@@ -61,35 +38,32 @@ export default {
   data() {
     return {
       content: '',
-      drawer: false,
-      dealContent: '',
       dealSearch: '',
       theme: 'tomorrow_night',
       error: false,
       json: {},
       errorMessage: '',
-      parserArray: [],
-      pathText: '',
       clientHeight: document.body.clientHeight - 36
     };
   },
   watch: {
     content(val, old_val) {
-      console.log(val);
       localStorage.setItem("content", val)
+    },
+    dealSearch(val, old_val) {
+      localStorage.setItem("dealSearch", val)
     }
   },
   computed: {
-    // 滚动区高度
-    // clientHeight: function () {
-    //   return document.body.clientHeight - 36;
-    // }
+
   },
   created() {
 
   },
   mounted() {
     this.content = localStorage.getItem("content") || defaultContent
+    this.dealSearch = localStorage.getItem("dealSearch")
+
     this.editorInit()
     window.onresize = () => {
       this.clientHeight = document.body.clientHeight - 36;
@@ -97,30 +71,42 @@ export default {
   },
 
   methods: {
+    openContextMenu(e) {
+
+      let items = [
+        { title: '&nbsp;复制', icon: 'el-icon-copy-document', fn: this.onCopy },
+        { title: '&nbsp;美化<span style="font-size:10px;color:#eee;"> ctrl + m </span>', icon: 'el-icon-magic-stick', fn: this.magic },
+        { title: '&nbsp;压缩<span style="font-size:10px;color:#eee;"> ctrl + i </span>', icon: 'el-icon-receiving', fn: this.zip },
+        { title: '&nbsp;折叠<span style="font-size:10px;color:#eee;"> ctrl + l </span>', icon: 'el-icon-folder', fn: this.fold },
+        { title: '&nbsp;展开<span style="font-size:10px;color:#eee;"> ctrl + o </span>', icon: 'el-icon-folder-opened', fn: this.unfold },
+      ]
+
+      basicContext.show(items, e);
+    },
     unfold() {
-      var dcSession = this.$refs['dcEditor'].editor.getSession()
-      dcSession.unfold();
+      var cSession = this.$refs['cEditor'].editor.getSession()
+      cSession.unfold();
     },
     fold() {
-      var dcSession = this.$refs['dcEditor'].editor.getSession()
-      dcSession.foldAll();
+      var cSession = this.$refs['cEditor'].editor.getSession()
+      cSession.foldAll();
     },
     magic() {
-      this.parserJson(this.dealContent)
+      this.parserJson(this.content)
       if (this.error) {
         return
       }
-      this.dealContent = JSON.stringify(this.json, null, 2);
+      this.content = JSON.stringify(this.json, null, 2);
     },
     zip() {
-      this.parserJson(this.dealContent)
+      this.parserJson(this.content)
       if (this.error) {
         return
       }
-      this.dealContent = JSON.stringify(this.json);
+      this.content = JSON.stringify(this.json);
     },
     onCopy() {
-      this.$copyText(this.dealContent).then(e => {
+      this.$copyText(this.content).then(e => {
         this.$message({
           duration: 1000,
           showClose: true,
@@ -142,16 +128,45 @@ export default {
       require("brace/theme/tomorrow_night")
       require("brace/snippets/json")
     },
+    saveContent() {
+      localStorage.setItem("oldContent", this.content)
+    },
+    delContent() {
+      return localStorage.removeItem("oldContent")
+    },
+    getContent() {
+      return localStorage.getItem("oldContent")
+    },
+    clearInput() {
+      var oc = this.getContent();
+      if (oc) {
+        this.content = oc
+      }
+      this.delContent();
+    },
     searchJson() {
-      this.parserJson(this.content)
+      var oc = this.getContent();
+      if (this.dealSearch.trim().length == 0) {
+        if (oc) {
+          this.content = oc
+        }
+        this.delContent();
+        return
+      }
+
+      if (!oc) {
+        this.saveContent();
+        oc = this.getContent();
+      }
+
+      this.parserJson(oc)
       if (this.error) {
         return
       }
-      this.drawer = true;
-      var dealContent = jmespath.search(this.json, this.dealSearch);
-      console.log(dealContent, this.json)
-      this.dealContent = JSON.stringify(dealContent, null, 2);
-      this.addCommands(this.$refs['dcEditor'].editor)
+
+      var content = jmespath.search(this.json, this.dealSearch);
+      this.content = JSON.stringify(content, null, 2);
+      this.addCommands(this.$refs['cEditor'].editor)
     },
     addCommands(veditor) {
       var that = this;
@@ -234,7 +249,8 @@ export default {
   background-color: #25282c !important;
   padding: 0px;
   margin: 0px;
-  height: 36px;
+  height: 100%;
+  width: 36px;
 
   display: flex;
   flex-direction: row;
